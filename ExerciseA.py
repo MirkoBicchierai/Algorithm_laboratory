@@ -1,20 +1,22 @@
 import string
 import random
 from timeit import Timer
+from os import listdir
+from os.path import isfile, join
 
 import matplotlib.pyplot as plt
 import numpy as np
 
 
-# noinspection PyUnboundLocalVariable
-def getRandomWord(length):
-    file = open("Dizionario.txt", 'r')
-    n = random.randint(0, 60000)
+def getRandomWord(attempt, dictionary, dictionary_length):
+    file = open(dictionary, 'r')
+    n = random.randint(0, dictionary_length)
+    query = ""
     for i in range(0, n):
-        tmp = file.readline()
-    while len(tmp) != length:
-        tmp = file.readline()
-    return tmp
+        query = file.readline()
+    while len(query) != attempt:
+        query = file.readline()
+    return query
 
 
 def addCharacter(word):
@@ -28,8 +30,12 @@ def removeCharacter(word):
 
 
 def swapCharacter(word):
-    tmp = random.randint(0, len(word) - 1)
-    tmp2 = random.randint(0, len(word) - 1)
+    while True:
+        tmp = random.randint(0, len(word) - 1)
+        tmp2 = random.randint(0, len(word) - 1)
+        if tmp != tmp2:
+            break
+
     if tmp < tmp2:
         if tmp2 == len(word) - 1:
             return word[:tmp] + word[tmp2] + word[tmp + 1:tmp2] + word[tmp]
@@ -40,11 +46,9 @@ def swapCharacter(word):
             return word[:tmp2] + word[tmp] + word[tmp2 + 1:tmp] + word[tmp2]
         else:
             return word[:tmp2] + word[tmp] + word[tmp2 + 1:tmp] + word[tmp2] + word[tmp + 1:]
-    else:
-        return swapCharacter(word)  # TODO REMOVE IT
 
 
-def testNGramEditDistance(x, n):
+def testNGramEditDistance(x, n, path):
     def coeffJaccard(x_gram, y_gram):
         inter = 0
         for x in x_gram:
@@ -56,8 +60,7 @@ def testNGramEditDistance(x, n):
                 union += 1
         return 0 if union == 0 else float(inter) / float(union)
 
-    def nGramEditDistance(x, n):
-        path = "Dizionario.txt"
+    def nGramEditDistance(x, n, path):
         x_gram = nGramMaker(x, n)
         CJ_minimo = 0.8
         minimoAttuale = [None, len(x), 0]
@@ -82,12 +85,17 @@ def testNGramEditDistance(x, n):
         f.close()
         return paroleMinime
 
-    def cost(operator):  # TODO cambiare
+    def cost(operator):
         if operator in ["COPY"]:
             return 0
         if operator in ["TWIDDLE"]:
             return 1.25
-        return 1
+        if operator in ["INSERT"]:
+            return 1
+        if operator in ["DELETE"]:
+            return 1
+        if operator in ["REPLACE"]:
+            return 1
 
     def editDistance(x, y):
         m = len(x)
@@ -121,16 +129,21 @@ def testNGramEditDistance(x, n):
             a[i] = x[i:i + n]
         return a
 
-    nGramEditDistance(x, n)
+    nGramEditDistance(x, n, path)
 
 
-def testNormalEditDistance(x):
-    def cost(operator):   # TODO cambiare
+def testNormalEditDistance(x, file):
+    def cost(operator):
         if operator in ["COPY"]:
             return 0
         if operator in ["TWIDDLE"]:
             return 1.25
-        return 1
+        if operator in ["INSERT"]:
+            return 1
+        if operator in ["DELETE"]:
+            return 1
+        if operator in ["REPLACE"]:
+            return 1
 
     def editDistance(x, y):
         m = len(x)
@@ -156,12 +169,11 @@ def testNormalEditDistance(x):
                     c[i][j] = c[i][j - 1] + cost("INSERT")
         return c[m][n]
 
-    def normalEditDistance(x):
-        path = "Dizionario.txt"
+    def normalEditDistance(x, file):
         minimoAttuale = [None, len(x)]
         paroleMinime = []
 
-        f = open(path, 'r')
+        f = open(file, 'r')
         for word in f:
             word = word.rstrip()
             tmp = editDistance(x, word)
@@ -177,251 +189,121 @@ def testNormalEditDistance(x):
         f.close()
         return paroleMinime
 
-    normalEditDistance(x)
+    normalEditDistance(x, file)
 
 
-f = open("RisultatiTest.txt", "w")
+def file_len(filename):
+    f = open(filename, 'r')
+    count = 0
+    for line in f:
+        if line != "\n":
+            count += 1
+    return count
 
-tempo = 0
-for i in range(1, 5):
-    word = getRandomWord(4 + i)
-    t = Timer(lambda: testNormalEditDistance(word))
-    tempo += t.timeit(number=1)
-f.write("Tempo Edit Distance Senza N-Grams su Parola nel Dizionario: " + str(round(tempo / 5, 5)) + "\n")
 
-tempo2 = 0
-for i in range(1, 5):
-    word = getRandomWord(4 + i)
-    t = Timer(lambda: testNGramEditDistance(word, 2))
-    tempo2 += t.timeit(number=1)
-f.write("Tempo Edit Distance Con 2-Grams su Parola nel Dizionario: " + str(round(tempo2 / 5, 5)) + "\n")
+def doGraph(name, y_variable, x_variable, length, dictionary):
+    x = np.arange(length)
+    plt.bar(x, height=y_variable)
+    plt.xticks(x, x_variable)
+    plt.ylabel('Seconds')
+    plt.savefig(name + (dictionary.replace('.txt', '')).replace('Dictionary/', '') + '.png')
+    plt.close()
 
-tempo3 = 0
-for i in range(1, 5):
-    word = getRandomWord(4 + i)
-    t = Timer(lambda: testNGramEditDistance(word, 3))
-    tempo3 += t.timeit(number=1)
-f.write("Tempo Edit Distance Con 3-Grams su Parola nel Dizionario: " + str(round(tempo3 / 5, 5)) + "\n")
 
-tempo4 = 0
-for i in range(1, 5):
-    word = getRandomWord(4 + i)
-    t = Timer(lambda: testNGramEditDistance(word, 4))
-    tempo4 += t.timeit(number=1)
-f.write("Tempo Edit Distance Con 4-Grams su Parola nel Dizionario: " + str(round(tempo4 / 5, 5)) + "\n")
+path = "Dictionary/"
+fileList = {path + f: file_len(path + f) for f in listdir(path) if isfile(join(path, f))}
 
-tempo5 = 0
-for i in range(1, 5):
-    word = getRandomWord(4 + i)
-    t = Timer(lambda: testNGramEditDistance(word, 5))
-    tempo5 += t.timeit(number=1)
-f.write("Tempo Edit Distance Con 5-Grams su Parola nel Dizionario: " + str(round(tempo5 / 5, 5)) + "\n\n")
+print("\n")
+for j in fileList:
+    time = []
+    single = 0
+    for i in range(1, 5):
+        word = getRandomWord(4 + i, j, fileList[j])
+        t = Timer(lambda: testNormalEditDistance(word, j))
+        single += t.timeit(number=1)
+    print("Tempo Edit Distance senza N-Grams nel dizionario " + j + ": " + str(round(single / 5, 5)))
 
-x = np.arange(5)
-plt.bar(x, height=[tempo, tempo2, tempo3, tempo4, tempo5])
-plt.xticks(x, ['No Grams', '2-Grams', '3-Grams', "4-Grams", "5-Grams"])
-plt.ylabel('Seconds')
-plt.savefig('ParolaNonModificata.png')
-plt.close()
+    for k in range(0, 4):
+        tempo = 0
+        for i in range(1, 5):
+            word = getRandomWord(4 + i, j, fileList[j])
+            t = Timer(lambda: testNGramEditDistance(word, k + 2, j))
+            tempo += t.timeit(number=1)
+        print("Tempo Edit Distance Con " + str(k + 2) + "-Grams nel dizionario" + j + ": " + str(round(tempo / 5, 5)))
+        time.append(tempo)
 
-x = np.arange(4)
-plt.bar(x, height=[tempo2, tempo3, tempo4, tempo5])
-plt.xticks(x, ['2-Grams', '3-Grams', "4-Grams", "5-Grams"])
-plt.ylabel('Seconds')
-plt.savefig('ParolaNonModificataSoloGram.png')
-plt.close()
+    doGraph("ParolaNonModificataSoloGram_", time, ['2-Grams', '3-Grams', "4-Grams", "5-Grams"], 4, j)
 
-tempo = 0
-for i in range(1, 5):
-    word = getRandomWord(4 + i)
-    t = Timer(lambda: testNormalEditDistance(swapCharacter(word)))
-    tempo += t.timeit(number=1)
-f.write("Tempo Edit Distance Senza N-Grams su Parola con due lettere scambiate: " + str(round(tempo / 5, 5)) + "\n")
+    time.append(single)
+    doGraph("ParolaNonModificata_",time, ['2-Grams', '3-Grams', "4-Grams", "5-Grams", 'No Grams'], 5, j)
 
-tempo2 = 0
-for i in range(1, 5):
-    word = getRandomWord(4 + i)
-    t = Timer(lambda: testNGramEditDistance(swapCharacter(word), 2))
-    tempo2 += t.timeit(number=1)
-f.write("Tempo Edit Distance Con 2-Grams su Parola con due lettere scambiate: " + str(round(tempo2 / 5, 5)) + "\n")
+    time = []
+    single = 0
+    for i in range(1, 5):
+        word = getRandomWord(4 + i, j, fileList[j])
+        t = Timer(lambda: testNormalEditDistance(swapCharacter(word), j))
+        single += t.timeit(number=1)
+    print("Tempo Edit Distance senza N-Grams con due lettere scambiate " + j + ": " + str(round(single / 5, 5)))
 
-tempo3 = 0
-for i in range(1, 5):
-    word = getRandomWord(4 + i)
-    t = Timer(lambda: testNGramEditDistance(swapCharacter(word), 3))
-    tempo3 += t.timeit(number=1)
-f.write("Tempo Edit Distance Con 3-Grams su Parola con due lettere scambiate: " + str(round(tempo3 / 5, 5)) + "\n")
+    for k in range(0, 4):
+        tempo = 0
+        for i in range(1, 5):
+            word = getRandomWord(4 + i, j, fileList[j])
+            t = Timer(lambda: testNGramEditDistance(swapCharacter(word), 2, j))
+            tempo += t.timeit(number=1)
+        print("Tempo Edit Distance Con " + str(k + 2) + "-Grams con due lettere scambiate " + j + ": " + str(
+            round(tempo / 5, 5)))
+        time.append(tempo)
 
-tempo4 = 0
-for i in range(1, 5):
-    word = getRandomWord(4 + i)
-    t = Timer(lambda: testNGramEditDistance(swapCharacter(word), 4))
-    tempo4 += t.timeit(number=1)
-f.write("Tempo Edit Distance Con 4-Grams su Parola con due lettere scambiate: " + str(round(tempo4 / 5, 5)) + "\n")
+    doGraph("LetteraScambiataSoloGram_", time, ['2-Grams', '3-Grams', "4-Grams", "5-Grams"], 4, j)
 
-tempo5 = 0
-for i in range(1, 5):
-    word = getRandomWord(4 + i)
-    t = Timer(lambda: testNGramEditDistance(swapCharacter(word), 5))
-    tempo5 += t.timeit(number=1)
-f.write("Tempo Edit Distance Con 5-Grams su Parola con due lettere scambiate: " + str(round(tempo5 / 5, 5)) + "\n\n")
+    time.append(single)
+    doGraph("LetteraScambiata_", time, ['2-Grams', '3-Grams', "4-Grams", "5-Grams", 'No Grams'], 5, j)
 
-x = np.arange(5)
-plt.bar(x, height=[tempo, tempo2, tempo3, tempo4, tempo5])
-plt.xticks(x, ['No Grams', '2-Grams', '3-Grams', "4-Grams", "5-Grams"])
-plt.ylabel('Seconds')
-plt.savefig('LetteraScambiata.png')
-plt.close()
+    time = []
+    single = 0
+    for i in range(1, 5):
+        word = getRandomWord(4 + i, j, fileList[j])
+        t = Timer(lambda: testNormalEditDistance(addCharacter(word), j))
+        single += t.timeit(number=1)
+    print("Tempo Edit Distance senza N-Grams con un carattere aggiunto " + j + ": " + str(round(single / 5, 5)))
 
-x = np.arange(4)
-plt.bar(x, height=[tempo2, tempo3, tempo4, tempo5])
-plt.xticks(x, ['2-Grams', '3-Grams', "4-Grams", "5-Grams"])
-plt.ylabel('Seconds')
-plt.savefig('LetteraScambiataSoloGram.png')
-plt.close()
+    for k in range(0, 4):
+        tempo = 0
+        for i in range(1, 5):
+            word = getRandomWord(4 + i, j, fileList[j])
+            t = Timer(lambda: testNGramEditDistance(addCharacter(word), 2, j))
+            tempo += t.timeit(number=1)
+        print("Tempo Edit Distance Con " + str(k + 2) + "-Grams con un carattere aggiunto " + j + ": " + str(
+            round(tempo / 5, 5)))
+        time.append(tempo)
 
-tempo = 0
-for i in range(1, 5):
-    word = getRandomWord(4 + i)
-    t = Timer(lambda: testNormalEditDistance(addCharacter(word)))
-    tempo += t.timeit(number=1)
-f.write("Tempo Edit Distance Senza N-Grams su Parola con un carattere aggiunto: " + str(round(tempo / 5, 5)) + "\n")
+    doGraph("LetteraAggiuntaSoloGram_", time, ['2-Grams', '3-Grams', "4-Grams", "5-Grams"], 4, j)
 
-tempo2 = 0
-for i in range(1, 5):
-    word = getRandomWord(4 + i)
-    t = Timer(lambda: testNGramEditDistance(addCharacter(word), 2))
-    tempo2 += t.timeit(number=1)
-f.write("Tempo Edit Distance Con 2-Grams su Parola con un carattere aggiunto: " + str(round(tempo2 / 5, 5)) + "\n")
+    time.append(single)
+    doGraph("LetteraAggiunta_", time, ['2-Grams', '3-Grams', "4-Grams", "5-Grams", 'No Grams'], 5, j)
 
-tempo3 = 0
-for i in range(1, 5):
-    word = getRandomWord(4 + i)
-    t = Timer(lambda: testNGramEditDistance(addCharacter(word), 3))
-    tempo3 += t.timeit(number=1)
-f.write("Tempo Edit Distance Con 3-Grams su Parola con un carattere aggiunto: " + str(round(tempo3 / 5, 5)) + "\n")
+    time = []
+    single = 0
+    for i in range(1, 5):
+        word = getRandomWord(4 + i, j, fileList[j])
+        t = Timer(lambda: testNormalEditDistance(removeCharacter(word), j))
+        single += t.timeit(number=1)
+    print("Tempo Edit Distance senza N-Grams con un carattere rimosso " + j + ": " + str(round(single / 5, 5)))
 
-tempo4 = 0
-for i in range(1, 5):
-    word = getRandomWord(4 + i)
-    t = Timer(lambda: testNGramEditDistance(addCharacter(word), 4))
-    tempo4 += t.timeit(number=1)
-f.write("Tempo Edit Distance Con 4-Grams su Parola con un carattere aggiunto: " + str(round(tempo4 / 5, 5)) + "\n")
+    for k in range(0, 4):
+        tempo = 0
+        for i in range(1, 5):
+            word = getRandomWord(4 + i, j, fileList[j])
+            t = Timer(lambda: testNGramEditDistance(removeCharacter(word), 2, j))
+            tempo += t.timeit(number=1)
+        print("Tempo Edit Distance Con " + str(k + 2) + "-Grams con un carattere rimosso " + j + ": " + str(
+            round(tempo / 5, 5)))
+        time.append(tempo)
 
-tempo5 = 0
-for i in range(1, 5):
-    word = getRandomWord(4 + i)
-    t = Timer(lambda: testNGramEditDistance(addCharacter(word), 5))
-    tempo5 += t.timeit(number=1)
-f.write("Tempo Edit Distance Con 5-Grams su Parola con un carattere aggiunto: " + str(round(tempo5 / 5, 5)) + "\n\n")
+    doGraph("LetteraRimossaSoloGram_", time, ['2-Grams', '3-Grams', "4-Grams", "5-Grams"], 4, j)
 
-x = np.arange(5)
-plt.bar(x, height=[tempo, tempo2, tempo3, tempo4, tempo5])
-plt.xticks(x, ['No Grams', '2-Grams', '3-Grams', "4-Grams", "5-Grams"])
-plt.ylabel('Seconds')
-plt.savefig('LetteraAggiunta.png')
-plt.close()
+    time.append(single)
+    doGraph("LetteraRimossa_", time, ['2-Grams', '3-Grams', "4-Grams", "5-Grams", 'No Grams'], 5, j)
 
-x = np.arange(4)
-plt.bar(x, height=[tempo2, tempo3, tempo4, tempo5])
-plt.xticks(x, ['2-Grams', '3-Grams', "4-Grams", "5-Grams"])
-plt.ylabel('Seconds')
-plt.savefig('LetteraAggiuntaSoloGram.png')
-plt.close()
-
-tempo = 0
-for i in range(1, 5):
-    word = getRandomWord(4 + i)
-    t = Timer(lambda: testNormalEditDistance(removeCharacter(word)))
-    tempo += t.timeit(number=1)
-f.write("Tempo Edit Distance Senza N-Grams su Parola con un carattere rimosso: " + str(round(tempo / 5, 5)) + "\n")
-
-tempo2 = 0
-for i in range(1, 5):
-    word = getRandomWord(4 + i)
-    t = Timer(lambda: testNGramEditDistance(removeCharacter(word), 2))
-    tempo2 += t.timeit(number=1)
-f.write("Tempo Edit Distance Con 2-Grams su Parola con un carattere rimosso: " + str(round(tempo2 / 5, 5)) + "\n")
-
-tempo3 = 0
-for i in range(1, 5):
-    word = getRandomWord(4 + i)
-    t = Timer(lambda: testNGramEditDistance(removeCharacter(word), 3))
-    tempo3 += t.timeit(number=1)
-f.write("Tempo Edit Distance Con 3-Grams su Parola con un carattere rimosso: " + str(round(tempo3 / 5, 5)) + "\n")
-
-tempo4 = 0
-for i in range(1, 5):
-    word = getRandomWord(4 + i)
-    t = Timer(lambda: testNGramEditDistance(removeCharacter(word), 4))
-    tempo4 += t.timeit(number=1)
-f.write("Tempo Edit Distance Con 4-Grams su Parola con un carattere rimosso: " + str(round(tempo4 / 5, 5)) + "\n")
-
-tempo5 = 0
-for i in range(1, 5):
-    word = getRandomWord(4 + i)
-    t = Timer(lambda: testNGramEditDistance(removeCharacter(word), 5))
-    tempo5 += t.timeit(number=1)
-f.write("Tempo Edit Distance Con 5-Grams su Parola con un carattere rimosso: " + str(round(tempo5 / 5, 5)) + "\n\n")
-
-x = np.arange(5)
-plt.bar(x, height=[tempo, tempo2, tempo3, tempo4, tempo5])
-plt.xticks(x, ['No Grams', '2-Grams', '3-Grams', "4-Grams", "5-Grams"])
-plt.ylabel('Seconds')
-plt.savefig('LetteraTolta.png')
-plt.close()
-
-x = np.arange(4)
-plt.bar(x, height=[tempo2, tempo3, tempo4, tempo5])
-plt.xticks(x, ['2-Grams', '3-Grams', "4-Grams", "5-Grams"])
-plt.ylabel('Seconds')
-plt.savefig('LetteraToltaSoloGram.png')
-plt.close()
-
-word = ["Contemporaneo", "Procastinare", "Petaloso", "Googlare", "Eserciziario"]
-
-tempo = 0
-for i in range(1, 5):
-    t = Timer(lambda: testNormalEditDistance(word[i]))
-    tempo += t.timeit(number=1)
-f.write(
-    "Tempo Edit Distance Senza N-Grams su Parola non appartenente al dizionario: " + str(round(tempo / 5, 5)) + "\n")
-
-tempo2 = 0
-for i in range(1, 5):
-    t = Timer(lambda: testNGramEditDistance(word[i], 2))
-    tempo2 += t.timeit(number=1)
-f.write("Tempo Edit Distance Con 2-Grams su Parola non appartenente al dizionario: " + str(round(tempo2 / 5, 5)) + "\n")
-
-tempo3 = 0
-for i in range(1, 5):
-    t = Timer(lambda: testNGramEditDistance(word[i], 3))
-    tempo3 += t.timeit(number=1)
-f.write("Tempo Edit Distance Con 3-Grams su Parola non appartenente al dizionario: " + str(round(tempo3 / 5, 5)) + "\n")
-
-tempo4 = 0
-for i in range(1, 5):
-    t = Timer(lambda: testNGramEditDistance(word[i], 4))
-    tempo4 += t.timeit(number=1)
-f.write("Tempo Edit Distance Con 4-Grams su Parola non appartenente al dizionario: " + str(round(tempo4 / 5, 5)) + "\n")
-
-tempo5 = 0
-for i in range(1, 5):
-    t = Timer(lambda: testNGramEditDistance(word[i], 5))
-    tempo5 += t.timeit(number=1)
-f.write(
-    "Tempo Edit Distance Con 5-Grams su Parola non appartenente al dizionario: " + str(round(tempo5 / 5, 5)) + "\n\n")
-
-x = np.arange(5)
-plt.bar(x, height=[tempo, tempo2, tempo3, tempo4, tempo5])
-plt.xticks(x, ['No Grams', '2-Grams', '3-Grams', "4-Grams", "5-Grams"])
-plt.ylabel('Seconds')
-plt.savefig('ParolaNonNelDizionario.png')
-plt.close()
-
-x = np.arange(4)
-plt.bar(x, height=[tempo2, tempo3, tempo4, tempo5])
-plt.xticks(x, ['2-Grams', '3-Grams', "4-Grams", "5-Grams"])
-plt.ylabel('Seconds')
-plt.savefig('ParolaNonNelDizionarioSoloGram.png')
-plt.close()
+    print("\n")
