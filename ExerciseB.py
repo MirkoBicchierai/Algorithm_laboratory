@@ -118,74 +118,58 @@ def test_insert(dim_table, dim_insert):
 
 
 def graph():
-    insert_vector = [random.randint(1, 1000) for _ in range(1000)]
-
-    table = HashTable(1000)
-    for i in range(len(insert_vector)):
-        table.hash_insert(insert_vector[i])
-
-    table_con = HashTableCon(1000)
-    for i in range(len(insert_vector)):
-        table_con.hash_insert(insert_vector[i])
-
-    vec_col_ind = [table.collision]
-    vec_col_con = [table_con.collision]
-
-    insert_vector = [random.randint(1, 1000) for _ in range(800)]
-    table = HashTable(1000)
-    for i in range(len(insert_vector)):
-        table.hash_insert(insert_vector[i])
-
-    table_con = HashTableCon(1000)
-    for i in range(len(insert_vector)):
-        table_con.hash_insert(insert_vector[i])
-
-    vec_col_ind.append(table.collision)
-    vec_col_con.append(table_con.collision)
-
-    insert_vector = [random.randint(1, 1000) for _ in range(500)]
-    table = HashTable(1000)
-    for i in range(len(insert_vector)):
-        table.hash_insert(insert_vector[i])
-
-    table_con = HashTableCon(1000)
-    for i in range(len(insert_vector)):
-        table_con.hash_insert(insert_vector[i])
-
-    vec_col_ind.append(table.collision)
-    vec_col_con.append(table_con.collision)
-
-    vec_col_ind = []
-    vec_col_con = []
-
-    for j in range(1000):
-
-        insert_vector = [random.randint(1, 100000) for _ in range((j+1)*100)]
+    vec_col_ind = [[] for _ in range(5)]
+    vec_col_con = [[] for _ in range(5)]
+    alpha = [0.001 * (j + 1) for j in range(1000)]
+    for k in range(5):
+        insert_vector = []
         table = HashTable(100000)
-        for i in range(len(insert_vector)):
-            table.hash_insert(insert_vector[i])
-
         table_con = HashTableCon(100000)
-        for i in range(len(insert_vector)):
-            table_con.hash_insert(insert_vector[i])
+        for j in range(1000):  # 1000
 
-        vec_col_ind.append(table.collision)
-        vec_col_con.append(table_con.collision)
+            for i in range(100):
+                insert_vector.append(random.randint(1, 100000))
 
-    print(vec_col_con[[0.001*(j+1)for j in range(1000)].index(0.2)])
-    print(vec_col_con[[0.001 * (j + 1) for j in range(1000)].index(0.4)])
-    print(vec_col_con[[0.001*(j+1)for j in range(1000)].index(0.6)])
-    print(vec_col_con[[0.001 * (j + 1) for j in range(1000)].index(0.8)])
-    print(vec_col_con[[0.001*(j+1)for j in range(1000)].index(1)])
+            # insert_vector = [random.randint(1, 100000) for _ in range((j+1)*100)]
 
-    print(vec_col_ind[[0.001*(j+1)for j in range(1000)].index(0.2)])
-    print(vec_col_ind[[0.001 * (j + 1) for j in range(1000)].index(0.4)])
-    print(vec_col_ind[[0.001*(j+1)for j in range(1000)].index(0.6)])
-    print(vec_col_ind[[0.001 * (j + 1) for j in range(1000)].index(0.8)])
-    print(vec_col_ind[[0.001*(j+1)for j in range(1000)].index(1)])
+            # table = HashTable(100000)
+            for i in range(j * 100, (j + 1) * 100):
+                table.hash_insert(insert_vector[i])
 
-    doGraph("exerciseB_fold/collisioni_concatenamento", [0.001*(j+1)for j in range(1000)], vec_col_con)
-    doGraph("exerciseB_fold/collisioni_indirizzamento_aperto", [0.001*(j+1)for j in range(1000)], vec_col_ind)
+            # table_con = HashTableCon(100000)
+            for i in range(j * 100, (j + 1) * 100):
+                table_con.hash_insert(insert_vector[i])
+
+            vec_col_ind[k].append(table.collision)
+            vec_col_con[k].append(table_con.collision)
+
+    avg_con = []
+    avg_ind = []
+
+    for i in range(len(vec_col_ind[0])):
+        avg_sum_con = 0
+        avg_sum_ind = 0
+        for j in range(5):
+            avg_sum_con = avg_sum_con + vec_col_con[j][i]
+            avg_sum_ind = avg_sum_ind + vec_col_ind[j][i]
+
+        avg_con.append(avg_sum_con / 5)
+        avg_ind.append(avg_sum_ind / 5)
+
+    print(avg_con[alpha.index(0.2)])
+    print(avg_con[alpha.index(0.4)])
+    print(avg_con[alpha.index(0.6)])
+    print(avg_con[alpha.index(0.8)])
+    print(avg_con[alpha.index(1)])
+
+    print(avg_ind[alpha.index(0.2)])
+    print(avg_ind[alpha.index(0.4)])
+    print(avg_ind[alpha.index(0.6)])
+    print(avg_ind[alpha.index(0.8)])
+    print(avg_ind[alpha.index(1)])
+
+    doGraph("exerciseB_fold/collisioni_concatenamento", alpha, avg_con)
+    doGraph("exerciseB_fold/collisioni_indirizzamento_aperto", alpha, avg_ind)
 
 
 if __name__ == "__main__":
